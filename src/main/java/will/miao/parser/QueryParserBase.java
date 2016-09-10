@@ -12,6 +12,7 @@ import org.apache.lucene.util.BytesRef;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -101,5 +102,10 @@ public abstract class QueryParserBase {
 				return null;
 		}
 
+	}
+
+	protected Query newInQuery(String field, List<String> values) {
+		// TODO:
+		return null;
 	}
 }

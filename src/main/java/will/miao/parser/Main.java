@@ -13,7 +13,7 @@ public class Main {
 
 		QueryParser queryParser = new QueryParser(fieldNames, fieldTypes);
 
-		Query query = queryParser.parse("price>3.414");
+		Query query = queryParser.parse("price BETWEEN 3.14 AND 10.8 OR time >= 400");
 
 		System.out.println(query);
 	}

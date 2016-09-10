@@ -116,58 +116,83 @@ Query TopLevelQuery() : {
 
 Query Predicate() : {
   Query query;
+  String field;
 }
 {
-//  query = IsNullPredicate()
+  field = Expression()
+  (
+//  query = IsNullPredicate() query = RemoveingLeftRecursion(query)
 //  { return query; }
-//  | query = IsNotNullPredicate()
+//  | query = IsNotNullPredicate() query = RemoveingLeftRecursion(query)
 //  { return query; }
-//  | query = BetweenPredicate()
+    query = BetweenPredicate(field) query = RemoveingLeftRecursion(query)
+    { return query; }
+    | query = ComparisonPredicate(field) query = RemoveingLeftRecursion(query)
+    { return query; }
+    | query = InPredicate(field) query = RemoveingLeftRecursion(query)
+    { return query; }
+//  | query = ExistsPredicate() query = RemoveingLeftRecursion(query)
 //  { return query; }
-  query = ComparisonPredicate()
+//  | query = LikePredicate() query = RemoveingLeftRecursion(query)
+//  { return query; }
+  )
+  | <LPAREN> query = Predicate() <RPAREN> query = RemoveingLeftRecursion(query)
   { return query; }
-  | query = CompoundPredicate()
-  { return query; }
-//  | query = InPredicate()
-//  { return query; }
-//  | query = ExistsPredicate()
-//  { return query; }
-//  | query = LikePredicate()
-//  { return query; }
 }
 
-Query ComparisonPredicate() : {
-  Query query;
+Query BetweenPredicate(String field) : {
   String e1, e2;
 }
 {
-  e1 = Expression()
-  (
-    LOOKAHEAD(2)
-    <EQUAL> e2 = Expression()
-    { return newExactQuery(e1, e2); }
-    | <NOT_EQUAL> e2 = Expression()
-    { return new BooleanQuery.Builder().add(newExactQuery(e1, e2), BooleanClause.Occur.MUST_NOT).build(); }
-    | <LESS_THAN> e2 = Expression()
-    { return newRangeQuery(e1, null, e2, false, false); }
-    | <GREATER_THAN> e2 = Expression()
-    { return newRangeQuery(e1, e2, null, false, false); }
-    | <LESS_THAN_OR_EQUAL> e2 = Expression()
-    { return newRangeQuery(e1, null, e2, false, true); }
-    | <GREATER_THAN_OR_EQUAL> e2 = Expression()
-    { return newRangeQuery(e1, e2, null, true, false); }
-  )
+  <KW_BETWEEN> e1 = Expression() <KW_AND> e2 = Expression()
+  { return newRangeQuery(field, e1, e2, true, true); }
 }
 
-Query CompoundPredicate() : {
-  BooleanQuery.Builder builder = new BooleanQuery.Builder();
-  Query q1, q2;
+Query ComparisonPredicate(String field) : {
+  String e2;
 }
 {
-  q1 = Predicate() <KW_AND> q2 = Predicate()
+  <EQUAL> e2 = Expression()
+  { return newExactQuery(field, e2); }
+  | <NOT_EQUAL> e2 = Expression()
+  { return new BooleanQuery.Builder().add(newExactQuery(field, e2), BooleanClause.Occur.MUST_NOT).build(); }
+  | <LESS_THAN> e2 = Expression()
+  { return newRangeQuery(field, null, e2, false, false); }
+  | <GREATER_THAN> e2 = Expression()
+  { return newRangeQuery(field, e2, null, false, false); }
+  | <LESS_THAN_OR_EQUAL> e2 = Expression()
+  { return newRangeQuery(field, null, e2, false, true); }
+  | <GREATER_THAN_OR_EQUAL> e2 = Expression()
+  { return newRangeQuery(field, e2, null, true, false); }
+}
+
+Query RemoveingLeftRecursion(Query q1) : {
+  BooleanQuery.Builder builder = new BooleanQuery.Builder();
+  Query q2;
+}
+{
+  <KW_AND> q2 = Predicate()
   { return builder.add(q1, BooleanClause.Occur.MUST).add(q2, BooleanClause.Occur.MUST).build(); }
-  | q1 = Predicate() <KW_OR> q2 = Predicate()
+  | <KW_OR> q2 = Predicate()
   { return builder.add(q1, BooleanClause.Occur.SHOULD).add(q2, BooleanClause.Occur.SHOULD).build(); }
+  | <EOF>
+  { return q1; }
+}
+
+Query InPredicate(String field) : {
+  BooleanQuery.Builder builder = new BooleanQuery.Builder();
+  Query query;
+  String value;
+}
+{
+  <KW_IN> <LPAREN> value = Expression()
+  { builder.add(newExactQuery(field, value), BooleanClause.Occur.SHOULD); }
+  (
+    <COMMA> value = Expression()
+    { builder.add(newExactQuery(field, value), BooleanClause.Occur.SHOULD); }
+  )*
+  <RPAREN>
+  { return builder.build(); }
 }
 
 String Expression() : {
