@@ -175,13 +175,11 @@ Query RemoveingLeftRecursion(Query q1) : {
   { return builder.add(q1, BooleanClause.Occur.MUST).add(q2, BooleanClause.Occur.MUST).build(); }
   | <KW_OR> q2 = Predicate()
   { return builder.add(q1, BooleanClause.Occur.SHOULD).add(q2, BooleanClause.Occur.SHOULD).build(); }
-  | <EOF>
-  { return q1; }
+  | { return q1; }
 }
 
 Query InPredicate(String field) : {
   BooleanQuery.Builder builder = new BooleanQuery.Builder();
-  Query query;
   String value;
 }
 {
